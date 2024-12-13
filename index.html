@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BitcoinZ Wallet Monitor</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <h1>BitcoinZ Wallet Monitor</h1>
+        <div id="status-indicator">
+          Node Status: <span id="node-status">Loading...</span>
+        </div>
+        <div id="node-controls">
+          <button id="start-btn">Start</button>
+          <button id="restart-btn">Restart</button>
+          <button id="stop-btn">Stop</button>
+        </div>
+      </div>
+    </header>
+    <main>
+      <div class="container">
+        <section id="wallet-info">
+          <h2>Wallet Information</h2>
+          <div id="wallet-data">
+            <p>
+              <strong
+                >Block Height:</strong
+              > <span id="block-height">Loading...</span>
+            </p>
+          </div>
+          <div class="chart-container">
+            <canvas id="progressChart" width="400" height="100"></canvas>
+          </div>
+          <div class="chart-container">
+            <canvas id="blockHeightChart" width="400" height="200"></canvas>
+          </div>
+          <div class="chart-container">
+            <canvas id="connectionsChart" width="400" height="200"></canvas>
+          </div>
+          <div id="additional-info"></div>
+        </section>
+        <section id="system-info">
+          <h2>System Information</h2>
+          <div id="mining-data" class="info-section"></div>
+          <div id="network-data" class="info-section"></div>
+          <div id="net-totals-data" class="info-section"></div>
+          <div id="system-resource-info" class="info-section"></div>
+        </section>
+      </div>
+      <section id="log-section">
+        <h2>Bitcoinz Node Logs</h2>
+        <pre id="log-output"></pre>
+      </section>
+    </main>
+    <footer>
+      <p>&copy; 2024 BitcoinZ Wallet Monitor</p>
+    </footer>
+    <script src="script.js"></script>
+  </body>
+</html>
