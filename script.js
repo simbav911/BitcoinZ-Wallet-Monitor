@@ -8,9 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const blockHeightCtx = document
     .getElementById("blockHeightChart")
     .getContext("2d");
-  const connectionsCtx = document
-    .getElementById("connectionsChart")
-    .getContext("2d");
 
   const blockHeightChart = new Chart(blockHeightCtx, {
     type: "line",
@@ -63,43 +60,6 @@ document.addEventListener("DOMContentLoaded", () => {
           position: 'top',
         }
       }
-    },
-  });
-
-  const connectionsChart = new Chart(connectionsCtx, {
-    type: "bar",
-    data: {
-      labels: ["Connections"],
-      datasets: [
-        {
-          label: "Connections",
-          data: [],
-          backgroundColor: "rgba(46, 204, 113, 0.6)",
-          borderColor: "rgba(46, 204, 113, 1)",
-          borderWidth: 1,
-        },
-      ],
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      scales: {
-        x: {
-          beginAtZero: true,
-          grid: {
-            color: "rgba(0, 0, 0, 0.05)",
-          },
-          title: {
-            display: true,
-            text: "Number of Connections",
-          },
-        },
-      },
-      plugins: {
-        legend: {
-          display: false,
-        },
-      },
     },
   });
 
@@ -233,9 +193,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     ];
     blockHeightChart.update('none');
-
-    connectionsChart.data.datasets[0].data = [info.connections || 0];
-    connectionsChart.update('none');
   }
 
   function updateSystemResourceCharts(data) {
@@ -728,12 +685,10 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchAdditionalData("getnetworkinfo", "network-data");
     fetchAdditionalData("getnettotals", "net-totals-data");
     fetchSystemResourceInfo();
+    setInterval(fetchSystemResourceInfo, 5000);
     setupControlButtons();
     setupLogControls();
     setInterval(updateNodeStatus, 10000);
-  refreshIntervalInput.disabled = !autoRefreshCheckbox.checked;
-  fetchLogs();
-  updateLogRefreshInterval();
   } catch (error) {
     console.error("Error during initialization:", error);
   }
