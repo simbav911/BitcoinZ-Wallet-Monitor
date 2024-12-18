@@ -306,7 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function fetchSystemResourceInfo() {
-    fetch("http://localhost:3000/system-resource-info")
+    fetch("/system-resource-info")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch system resource info");
@@ -322,7 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function fetchData() {
-    fetch("http://localhost:3000/wallet-info")
+    fetch("/wallet-info")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch wallet info");
@@ -348,7 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const element = document.getElementById(elementId);
     if (!element) return;
 
-    fetch(`http://localhost:3000/${endpoint}`)
+    fetch(`/${endpoint}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Failed to fetch ${endpoint}`);
@@ -487,7 +487,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateNodeStatus() {
-    fetch("http://localhost:3000/bitcoinz-status")
+    fetch("/bitcoinz-status")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch node status");
@@ -517,7 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function fetchLogs() {
-    fetch("http://localhost:3000/bitcoinz-logs")
+    fetch("/bitcoinz-logs")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch logs");
@@ -547,7 +547,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (startBtn) {
       startBtn.addEventListener("click", () => {
         if (confirm("Are you sure you want to start the BitcoinZ node?")) {
-          fetch("http://localhost:3000/start-bitcoinz")
+          fetch("/start-bitcoinz")
             .then((response) => {
               if (!response.ok) {
                 throw new Error("Failed to start BitcoinZ node");
@@ -564,7 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (restartBtn) {
       restartBtn.addEventListener("click", () => {
         if (confirm("Are you sure you want to restart the BitcoinZ node?")) {
-          fetch("http://localhost:3000/restart-bitcoinz")
+          fetch("/restart-bitcoinz")
             .then((response) => {
               if (!response.ok) {
                 throw new Error("Failed to restart BitcoinZ node");
@@ -581,7 +581,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (stopBtn) {
       stopBtn.addEventListener("click", () => {
         if (confirm("Are you sure you want to stop the BitcoinZ node?")) {
-          fetch("http://localhost:3000/stop-bitcoinz")
+          fetch("/stop-bitcoinz")
             .then((response) => {
               if (!response.ok) {
                 throw new Error("Failed to stop BitcoinZ node");

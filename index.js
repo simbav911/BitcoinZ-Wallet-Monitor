@@ -7,13 +7,19 @@ const app = express();
 const port = 3000;
 
 app.use(cors());
-app.use(express.static("."));
+// Serve static files from the current directory
+app.use(express.static(__dirname));
 
 let walletData = [];
 
+// Remove redundant route since express.static will handle serving index.html
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/index.html");
+});
+
 function fetchData() {
   exec(
-    "/usr/local/bin/bitcoinz-cli getblockchaininfo",
+    "bitcoinz-cli getblockchaininfo",
     (error, stdout, stderr) => {
       if (error) {
         console.error(`exec error: ${error}`);
@@ -25,7 +31,7 @@ function fetchData() {
       }
       try {
         const blockchainInfo = JSON.parse(stdout);
-        exec("/usr/local/bin/bitcoinz-cli getinfo", (error, stdout, stderr) => {
+        exec("bitcoinz-cli getinfo", (error, stdout, stderr) => {
           if (error) {
             console.error(`exec error: ${error}`);
             return;
@@ -86,25 +92,25 @@ app.get("/wallet-info", (req, res) => {
 });
 
 app.get("/getmininginfo", (req, res) => {
-  fetchAndParse("/usr/local/bin/bitcoinz-cli getmininginfo", (data) => {
+  fetchAndParse("bitcoinz-cli getmininginfo", (data) => {
     res.json(data);
   });
 });
 
 app.get("/getnetworkinfo", (req, res) => {
-  fetchAndParse("/usr/local/bin/bitcoinz-cli getnetworkinfo", (data) => {
+  fetchAndParse("bitcoinz-cli getnetworkinfo", (data) => {
     res.json(data);
   });
 });
 
 app.get("/getnettotals", (req, res) => {
-  fetchAndParse("/usr/local/bin/bitcoinz-cli getnettotals", (data) => {
+  fetchAndParse("bitcoinz-cli getnettotals", (data) => {
     res.json(data);
   });
 });
 
 app.get("/getwalletinfo", (req, res) => {
-  fetchAndParse("/usr/local/bin/bitcoinz-cli getwalletinfo", (data) => {
+  fetchAndParse("bitcoinz-cli getwalletinfo", (data) => {
     if (data.error && data.error.includes("Method not found")) {
       res.json({
         error: "Wallet functionality is not enabled on this node.",
@@ -147,23 +153,45 @@ app.get("/system-resource-info", (req, res) => {
 });
 
 app.get("/bitcoinz-status", (req, res) => {
+  // First try systemctl
   exec("systemctl is-active bitcoinz", (error, stdout, stderr) => {
-				if (error) {
-						console.error(`exec error: ${error}`);
-						return res.status(500).json({ error: "Failed to check service status" });
-				}
-				res.json({ status: stdout.trim() });
-		});
+    if (!error && stdout.trim() === 'active') {
+      res.json({ status: 'active' });
+    } else {
+      // If systemctl fails, try bitcoinz-cli
+      exec("bitcoinz-cli getinfo", (error, stdout, stderr) => {
+        if (error) {
+          console.error(`exec error: ${error}`);
+          return res.status(500).json({ error: "Failed to check service status" });
+        }
+        try {
+          JSON.parse(stdout); // If we can parse the output, the node is running
+          res.json({ status: 'active' });
+        } catch (parseError) {
+          console.error(`JSON parse error: ${parseError}`);
+          res.status(500).json({ error: "Failed to check service status" });
+        }
+      });
+    }
+  });
 });
 
 app.get("/bitcoinz-logs", (req, res) => {
-		exec("journalctl -u bitcoinz -n 50", (error, stdout, stderr) => {
-				if (error) {
-						console.error(`exec error: ${error}`);
-						return res.status(500).json({ error: "Failed to fetch logs" });
-				}
-				res.send(`<pre>${stdout}</pre>`);
-		});
+  // First try journalctl
+  exec("journalctl -u bitcoinz -n 50", (error, stdout, stderr) => {
+    if (!error && stdout) {
+      res.send(`<pre>${stdout}</pre>`);
+    } else {
+      // If journalctl fails, try debug.log
+      exec("tail -n 50 ~/.bitcoinz/debug.log", (error, stdout, stderr) => {
+        if (error) {
+          console.error(`exec error: ${error}`);
+          return res.status(500).json({ error: "Failed to fetch logs" });
+        }
+        res.send(`<pre>${stdout}</pre>`);
+      });
+    }
+  });
 });
 
 function executeCommand(command, res) {
@@ -177,15 +205,15 @@ function executeCommand(command, res) {
 }
 
 app.get('/start-bitcoinz', (req, res) => {
-				executeCommand('sudo systemctl start bitcoinz', res);
+  executeCommand('systemctl start bitcoinz', res);
 });
 
 app.get('/stop-bitcoinz', (req, res) => {
-				executeCommand('sudo systemctl stop bitcoinz', res);
+  executeCommand('systemctl stop bitcoinz', res);
 });
 
 app.get('/restart-bitcoinz', (req, res) => {
-				executeCommand('sudo systemctl restart bitcoinz', res);
+  executeCommand('systemctl restart bitcoinz', res);
 });
 
 app.listen(port, () => {
