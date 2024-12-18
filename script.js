@@ -78,13 +78,30 @@ document.addEventListener("DOMContentLoaded", () => {
       const sizeOnDisk = (blockchainInfo.size_on_disk || 0) / (1024 * 1024 * 1024); // Convert to GiB
       const totalSize = 14.19; // Total expected size in GiB
       const sizePercent = ((sizeOnDisk / totalSize) * 100).toFixed(2);
-      blockHeightElement.textContent = `Reindexing blocks | ${sizeOnDisk.toFixed(2)} GiB / ${totalSize} GiB (${sizePercent}%, ${blocks} blocks)`;
+      
+      // Check if blocks match headers (indicating sync is complete)
+      if (blocks === headers && blocks > 0) {
+        blockHeightElement.textContent = `Current Block Height: ${blocks}`;
+        blockHeightElement.className = 'synced';
+      } else {
+        blockHeightElement.textContent = `Reindexing blocks | ${sizeOnDisk.toFixed(2)} GiB / ${totalSize} GiB (${sizePercent}%, ${blocks} blocks)`;
+        blockHeightElement.className = 'reindexing';
+      }
     }
 
-    // Update progress chart to show disk size progress during reindexing
-    const sizeOnDisk = (blockchainInfo.size_on_disk || 0) / (1024 * 1024 * 1024); // Convert to GiB
-    const totalSize = 14.19; // Total expected size in GiB
-    const progress = (sizeOnDisk / totalSize) * 100;
+    // Update progress chart
+    const blocks = blockchainInfo.blocks || 0;
+    const headers = blockchainInfo.headers || 0;
+    let progress;
+    
+    // If blocks match headers, show 100% progress
+    if (blocks === headers && blocks > 0) {
+        progress = 100;
+    } else {
+        const sizeOnDisk = (blockchainInfo.size_on_disk || 0) / (1024 * 1024 * 1024); // Convert to GiB
+        const totalSize = 14.19; // Total expected size in GiB
+        progress = (sizeOnDisk / totalSize) * 100;
+    }
     const progressElement = document.getElementById("progressChart");
     if (progressElement) {
       const progressCtx = progressElement.getContext("2d");

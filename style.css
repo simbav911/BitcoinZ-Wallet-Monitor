@@ -358,6 +358,25 @@ section:hover {
   box-shadow: var(--box-shadow);
 }
 
+/* Block height status styles */
+#block-height {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+#block-height.synced {
+  background-color: var(--success-color);
+  color: white;
+}
+
+#block-height.reindexing {
+  background-color: var(--accent-color);
+  color: white;
+}
+
 #log-section {
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   color: white;
