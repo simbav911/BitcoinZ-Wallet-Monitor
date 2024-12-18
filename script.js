@@ -18,13 +18,21 @@ document.addEventListener("DOMContentLoaded", () => {
       labels: [],
       datasets: [
         {
-          label: "Block Height",
+          label: "Current Blocks",
           data: [],
           borderColor: "#3498db",
           backgroundColor: "rgba(52, 152, 219, 0.1)",
           borderWidth: 2,
           fill: true,
         },
+        {
+          label: "Target Headers",
+          data: [],
+          borderColor: "#e74c3c",
+          backgroundColor: "rgba(231, 76, 60, 0.1)",
+          borderWidth: 2,
+          fill: false,
+        }
       ],
     },
     options: {
@@ -102,14 +110,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const blockchainInfo = latestData.blockchainInfo;
     const info = latestData.info;
 
-    // Update block height
+    // Update block height with more context
     const blockHeightElement = document.getElementById("block-height");
     if (blockHeightElement) {
-      blockHeightElement.textContent = blockchainInfo.blocks || "N/A";
+      const blocks = blockchainInfo.blocks || 0;
+      const headers = blockchainInfo.headers || 0;
+      const sizeOnDisk = (blockchainInfo.size_on_disk || 0) / (1024 * 1024 * 1024); // Convert to GiB
+      const totalSize = 14.19; // Total expected size in GiB
+      const sizePercent = ((sizeOnDisk / totalSize) * 100).toFixed(2);
+      blockHeightElement.textContent = `Reindexing blocks | ${sizeOnDisk.toFixed(2)} GiB / ${totalSize} GiB (${sizePercent}%, ${blocks} blocks)`;
     }
 
-    // Update progress chart
-    const progress = parseFloat(blockchainInfo.verificationprogress) * 100;
+    // Update progress chart to show disk size progress during reindexing
+    const sizeOnDisk = (blockchainInfo.size_on_disk || 0) / (1024 * 1024 * 1024); // Convert to GiB
+    const totalSize = 14.19; // Total expected size in GiB
+    const progress = (sizeOnDisk / totalSize) * 100;
     const progressElement = document.getElementById("progressChart");
     if (progressElement) {
       const progressCtx = progressElement.getContext("2d");
@@ -173,6 +188,24 @@ document.addEventListener("DOMContentLoaded", () => {
           <span class="info-label">Connections:</span>
           <span class="info-value">${info.connections || "N/A"}</span>
         </div>
+        <div class="info-item">
+          <span class="info-label">Reindex Progress:</span>
+          <span class="info-value">
+            ${((blockchainInfo.size_on_disk || 0) / (1024 * 1024 * 1024)).toFixed(2)} GiB / 14.19 GiB
+          </span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Current Blocks:</span>
+          <span class="info-value">${blockchainInfo.blocks || 0}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Chain:</span>
+          <span class="info-value">${blockchainInfo.chain || "N/A"}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Headers:</span>
+          <span class="info-value">${blockchainInfo.headers || "N/A"}</span>
+        </div>
       `;
     }
 
@@ -180,9 +213,25 @@ document.addEventListener("DOMContentLoaded", () => {
     blockHeightChart.data.labels = data.map((d) =>
       new Date(d.timestamp).toLocaleTimeString()
     );
-    blockHeightChart.data.datasets[0].data = data.map(
-      (d) => d.blockchainInfo.blocks
-    );
+    // Update block height chart with both blocks and headers
+    blockHeightChart.data.datasets = [
+      {
+        label: "Current Blocks",
+        data: data.map((d) => d.blockchainInfo.blocks || 0),
+        borderColor: "#3498db",
+        backgroundColor: "rgba(52, 152, 219, 0.1)",
+        borderWidth: 2,
+        fill: true,
+      },
+      {
+        label: "Target Headers",
+        data: data.map((d) => d.blockchainInfo.headers || 0),
+        borderColor: "#e74c3c",
+        backgroundColor: "rgba(231, 76, 60, 0.1)",
+        borderWidth: 2,
+        fill: false,
+      }
+    ];
     blockHeightChart.update('none');
 
     connectionsChart.data.datasets[0].data = [info.connections || 0];
@@ -208,8 +257,23 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-    // RAM Usage Chart
-    const ramUsagePercent = (data.memory.totalMem - data.memory.freeMem) / data.memory.totalMem * 100;
+    // Clear any existing resource details
+    document.querySelectorAll('.resource-details').forEach(el => el.remove());
+
+    // RAM Usage Chart with detailed info
+    const totalRAM = data.memory.totalMem / (1024 * 1024 * 1024); // Convert to GB
+    const freeRAM = data.memory.freeMem / (1024 * 1024 * 1024);
+    const usedRAM = totalRAM - freeRAM;
+    const ramUsagePercent = (usedRAM / totalRAM) * 100;
+    
+    // Add RAM details text
+    const ramDetails = document.createElement('div');
+    ramDetails.className = 'resource-details';
+    ramDetails.innerHTML = `
+      <strong>RAM Usage:</strong> ${usedRAM.toFixed(2)} GB / ${totalRAM.toFixed(2)} GB (${ramUsagePercent.toFixed(1)}%)
+    `;
+    document.getElementById('ramUsageChart').parentElement.appendChild(ramDetails);
+    
     const ramCtx = document.getElementById('ramUsageChart').getContext('2d');
     
     if (ramChart) {
@@ -237,8 +301,17 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // CPU Usage Chart
+    // CPU Usage Chart with detailed info
     const cpuLoad = data.cpu.loadavg[0] / data.cpu.cores * 100;
+    const cpuDetails = document.createElement('div');
+    cpuDetails.className = 'resource-details';
+    cpuDetails.innerHTML = `
+      <strong>CPU Usage:</strong> ${cpuLoad.toFixed(1)}% (${data.cpu.cores} cores)
+      <br>
+      <strong>Load Average:</strong> ${data.cpu.loadavg.map(load => load.toFixed(2)).join(', ')} (1m, 5m, 15m)
+    `;
+    document.getElementById('cpuUsageChart').parentElement.appendChild(cpuDetails);
+    
     const cpuCtx = document.getElementById('cpuUsageChart').getContext('2d');
     
     if (cpuChart) {
@@ -275,8 +348,17 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // Disk Usage Chart
+    // Disk Usage Chart with detailed info
     const diskUsagePercent = parseInt(data.disk.used.replace('%', ''));
+    const diskDetails = document.createElement('div');
+    diskDetails.className = 'resource-details';
+    diskDetails.innerHTML = `
+      <strong>Disk Space:</strong> ${data.disk.used} used of ${data.disk.total}
+      <br>
+      <strong>Available:</strong> ${data.disk.available}
+    `;
+    document.getElementById('diskUsageChart').parentElement.appendChild(diskDetails);
+    
     const diskCtx = document.getElementById('diskUsageChart').getContext('2d');
     
     if (diskChart) {
@@ -516,8 +598,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   }
 
+  let logRefreshInterval;
+
   function fetchLogs() {
-    fetch("/bitcoinz-logs")
+    const lines = document.getElementById('log-lines').value;
+    fetch(`/bitcoinz-logs?lines=${lines}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to fetch logs");
@@ -528,6 +613,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const logOutput = document.getElementById("log-output");
         if (logOutput) {
           logOutput.innerHTML = logs;
+          // Auto-scroll to bottom if user hasn't scrolled up
+          if (logOutput.scrollHeight - logOutput.scrollTop === logOutput.clientHeight) {
+            logOutput.scrollTop = logOutput.scrollHeight;
+          }
         }
       })
       .catch((error) => {
@@ -537,6 +626,41 @@ document.addEventListener("DOMContentLoaded", () => {
           logOutput.innerHTML = "<p>Failed to load logs.</p>";
         }
       });
+  }
+
+  function setupLogControls() {
+    const refreshButton = document.getElementById('refresh-logs');
+    const autoRefreshCheckbox = document.getElementById('auto-refresh');
+    const refreshIntervalInput = document.getElementById('refresh-interval');
+    const logLinesInput = document.getElementById('log-lines');
+
+    function updateLogRefreshInterval() {
+      clearInterval(logRefreshInterval);
+      if (autoRefreshCheckbox.checked) {
+        const interval = Math.max(2, parseInt(refreshIntervalInput.value) || 5) * 1000;
+        logRefreshInterval = setInterval(fetchLogs, interval);
+      }
+    }
+
+    // Event listeners for controls
+    refreshButton.addEventListener('click', fetchLogs);
+    
+    autoRefreshCheckbox.addEventListener('change', () => {
+      refreshIntervalInput.disabled = !autoRefreshCheckbox.checked;
+      updateLogRefreshInterval();
+    });
+
+    refreshIntervalInput.addEventListener('change', updateLogRefreshInterval);
+    
+    logLinesInput.addEventListener('change', () => {
+      logLinesInput.value = Math.max(10, Math.min(1000, parseInt(logLinesInput.value) || 200));
+      fetchLogs();
+    });
+
+    // Initial setup
+    refreshIntervalInput.disabled = !autoRefreshCheckbox.checked;
+    fetchLogs();
+    updateLogRefreshInterval();
   }
 
   function setupControlButtons() {
@@ -604,11 +728,12 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchAdditionalData("getnetworkinfo", "network-data");
     fetchAdditionalData("getnettotals", "net-totals-data");
     fetchSystemResourceInfo();
-    setInterval(fetchSystemResourceInfo, 5000);
-    updateNodeStatus();
-    fetchLogs();
     setupControlButtons();
+    setupLogControls();
     setInterval(updateNodeStatus, 10000);
+  refreshIntervalInput.disabled = !autoRefreshCheckbox.checked;
+  fetchLogs();
+  updateLogRefreshInterval();
   } catch (error) {
     console.error("Error during initialization:", error);
   }

@@ -18,47 +18,60 @@ app.get("/", (req, res) => {
 });
 
 function fetchData() {
-  exec(
-    "bitcoinz-cli getblockchaininfo",
-    (error, stdout, stderr) => {
-      if (error) {
-        console.error(`exec error: ${error}`);
-        return;
-      }
-      if (!stdout) {
-        console.error("BitcoinZ node is not ready yet");
-        return;
-      }
-      try {
-        const blockchainInfo = JSON.parse(stdout);
-        exec("bitcoinz-cli getinfo", (error, stdout, stderr) => {
-          if (error) {
-            console.error(`exec error: ${error}`);
-            return;
-          }
-          if (!stdout) {
-            console.error("BitcoinZ node is not ready yet");
-            return;
-          }
+  // Get both blockchain info and general info in parallel
+  Promise.all([
+    new Promise((resolve) => {
+      exec("bitcoinz-cli getblockchaininfo", (error, stdout, stderr) => {
+        if (error || !stdout) {
+          console.error("Error getting blockchain info:", error);
+          resolve({});
+        } else {
           try {
-            const info = JSON.parse(stdout);
-            walletData.push({
-              timestamp: Date.now(),
-              blockchainInfo: blockchainInfo,
-              info: info,
-            });
-            if (walletData.length > 60) {
-              walletData.shift();
-            }
+            resolve(JSON.parse(stdout));
           } catch (parseError) {
-            console.error(`JSON parse error: ${parseError}`);
+            console.error("Error parsing blockchain info:", parseError);
+            resolve({});
           }
-        });
-      } catch (parseError) {
-        console.error(`JSON parse error: ${parseError}`);
+        }
+      });
+    }),
+    new Promise((resolve) => {
+      exec("bitcoinz-cli getinfo", (error, stdout, stderr) => {
+        if (error || !stdout) {
+          console.error("Error getting info:", error);
+          resolve({});
+        } else {
+          try {
+            resolve(JSON.parse(stdout));
+          } catch (parseError) {
+            console.error("Error parsing info:", parseError);
+            resolve({});
+          }
+        }
+      });
+    })
+  ]).then(([blockchainInfo, info]) => {
+    // Always push data even if some values are missing
+    walletData.push({
+      timestamp: Date.now(),
+      blockchainInfo: {
+        ...blockchainInfo,
+        blocks: blockchainInfo.blocks || info.blocks || 0,
+        headers: blockchainInfo.headers || 0,
+        verificationprogress: blockchainInfo.verificationprogress || 0
+      },
+      info: {
+        ...info,
+        blocks: info.blocks || blockchainInfo.blocks || 0,
+        connections: info.connections || 0,
+        version: info.version || 0
       }
+    });
+
+    if (walletData.length > 60) {
+      walletData.shift();
     }
-  );
+  });
 }
 
 // Fetch data every 5 seconds
@@ -177,19 +190,29 @@ app.get("/bitcoinz-status", (req, res) => {
 });
 
 app.get("/bitcoinz-logs", (req, res) => {
-  // First try journalctl
-  exec("journalctl -u bitcoinz -n 50", (error, stdout, stderr) => {
-    if (!error && stdout) {
-      res.send(`<pre>${stdout}</pre>`);
-    } else {
-      // If journalctl fails, try debug.log
-      exec("tail -n 50 ~/.bitcoinz/debug.log", (error, stdout, stderr) => {
-        if (error) {
-          console.error(`exec error: ${error}`);
-          return res.status(500).json({ error: "Failed to fetch logs" });
+  let lines = parseInt(req.query.lines) || 200; // Default to 200 lines
+  // Ensure lines is between 10 and 1000 for safety
+  lines = Math.max(10, Math.min(1000, lines));
+  // Try to read from the debug.log file in the .bitcoinz directory
+  exec(`tail -n ${lines} /root/.bitcoinz/debug.log`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`debug.log error: ${error}`);
+      // If that fails, try journalctl
+      exec(`journalctl -u bitcoinz -n ${lines}`, (error2, stdout2, stderr2) => {
+        if (error2) {
+          console.error(`journalctl error: ${error2}`);
+          return res.status(500).json({ error: "Failed to fetch logs from both debug.log and journalctl" });
         }
-        res.send(`<pre>${stdout}</pre>`);
+        res.send(`<pre>${stdout2}</pre>`);
       });
+    } else {
+      // Format the log output to be more readable
+      const formattedLogs = stdout
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line) // Remove empty lines
+        .join('\n');
+      res.send(`<pre>${formattedLogs}</pre>`);
     }
   });
 });
