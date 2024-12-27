@@ -40,6 +40,23 @@ A comprehensive web-based dashboard for monitoring BitcoinZ wallet and node stat
 - JavaScript (ES6+)
 - Chart.js for data visualization
 
+## Starting the Server
+
+To start the BitcoinZ Wallet Monitor server:
+
+```bash
+node index.js
+```
+
+The server will start on port 3000. You can access it at:
+http://localhost:3000
+
+For development with automatic restart on file changes:
+```bash
+npm install -g nodemon
+nodemon index.js
+```
+
 ## Installation
 
 1. Clone the repository:
